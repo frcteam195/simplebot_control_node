@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(simplebot_control_node)
+set(PROJECT_NAME "simplebot_control_node")
+project(${PROJECT_NAME})
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -111,6 +112,7 @@ catkin_package(
 #  LIBRARIES rio_control_node
 #  CATKIN_DEPENDS other_catkin_pkg
 #  DEPENDS system_lib
+  CATKIN_DEPENDS roscpp message_generation message_runtime rio_control_node
 )
 
 ###########
@@ -232,3 +234,4 @@ if(ROBOT_ARCHITECTURE_AARCH64)
 endif(ROBOT_ARCHITECTURE_AARCH64)
 
 target_link_libraries(simplebot_control_node Threads::Threads)
+add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
