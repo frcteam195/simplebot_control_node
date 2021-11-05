@@ -7,9 +7,20 @@
 #include <map>
 #include <mutex>
 #include <iostream>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+
 
 #include <rio_control_node/Motor_Control.h>
 
+#define PORT     5809
+#define MAXLINE 1024
+#define HOSTNAME "10.0.2.99"
+
+
+#pragma pack()
 struct MotorUDPPacket
 {
 	uint32_t api_packet_id;
@@ -25,7 +36,7 @@ std::mutex motor_control_mutex;
 
 void motorControlCallback(const rio_control_node::Motor_Control &msg)
 {
-	std::lock_guard<std::mutex> lock(motor_control_mutex);
+	std::scoped_lock<std::mutex> lock(motor_control_mutex);
 	_motorUDPPacket.api_packet_id = 0x00000001;
 	_motorUDPPacket.left_motor_val = 0;
 	_motorUDPPacket.right_motor_val = 0;
@@ -37,16 +48,48 @@ void motorControlCallback(const rio_control_node::Motor_Control &msg)
 		{
 			_motorUDPPacket.left_motor_val = msg.motors[i].output_value + msg.motors[i].arbitrary_feedforward;
 		}
-			break;
+		break;
 		case 1:
 		{
 			_motorUDPPacket.right_motor_val = msg.motors[i].output_value + msg.motors[i].arbitrary_feedforward;
 		}
-			break;
+		break;
 		default:
 			break;
 		}
 	}
+}
+
+void motor_transmit_loop()
+{
+	char buffer[1500];
+	memset(buffer, 0, 1500);
+
+	sockaddr_in servaddr;
+    int fd = socket(AF_INET,SOCK_DGRAM,0);
+    if(fd<0){
+        perror("cannot open socket");
+        return false;
+    }
+    memset(&servaddr, 0, sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = inet_addr(HOSTNAME);
+    servaddr.sin_port = htons(PORT);
+
+	ros::Rate rate(50);
+
+	while (ros::ok())
+	{
+		{
+			std::scoped_lock<std::mutex> lock(motor_control_mutex);
+			if (sendto(fd, &_motorUDPPacket, sizeof(_motorUDPPacket), 0, (sockaddr*)&servaddr, sizeof(servaddr)) < 0)
+			{
+				ROS_ERROR("Cannot send cksimplerobot control message");
+			}
+		}
+		rate.sleep();
+	}
+	close(fd);
 }
 
 int main(int argc, char **argv)
@@ -67,7 +110,7 @@ int main(int argc, char **argv)
 	ros::NodeHandle n;
 
 	node = &n;
-
+	std::thread motorSendThread(motor_transmit_loop);
 	ros::Subscriber motorControl = node->subscribe("MotorControl", 100, motorControlCallback);
 
 	ros::spin();
