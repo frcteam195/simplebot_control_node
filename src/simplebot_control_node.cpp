@@ -36,7 +36,7 @@ std::mutex motor_control_mutex;
 
 void motorControlCallback(const rio_control_node::Motor_Control &msg)
 {
-	std::scoped_lock<std::mutex> lock(motor_control_mutex);
+	std::lock_guard<std::mutex> lock(motor_control_mutex);
 	_motorUDPPacket.api_packet_id = 0x00000001;
 	_motorUDPPacket.left_motor_val = 0;
 	_motorUDPPacket.right_motor_val = 0;
@@ -68,8 +68,7 @@ void motor_transmit_loop()
 	sockaddr_in servaddr;
     int fd = socket(AF_INET,SOCK_DGRAM,0);
     if(fd<0){
-        perror("cannot open socket");
-        return false;
+        ROS_ERROR("cannot open socket");
     }
     memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
@@ -81,7 +80,7 @@ void motor_transmit_loop()
 	while (ros::ok())
 	{
 		{
-			std::scoped_lock<std::mutex> lock(motor_control_mutex);
+			std::lock_guard<std::mutex> lock(motor_control_mutex);
 			if (sendto(fd, &_motorUDPPacket, sizeof(_motorUDPPacket), 0, (sockaddr*)&servaddr, sizeof(servaddr)) < 0)
 			{
 				ROS_ERROR("Cannot send cksimplerobot control message");
