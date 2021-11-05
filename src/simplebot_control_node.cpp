@@ -17,7 +17,7 @@
 
 #define PORT     5809
 #define MAXLINE 1024
-#define HOSTNAME "10.0.2.99"
+#define HOSTNAME "10.0.2.104"
 
 
 #pragma pack()
@@ -44,12 +44,12 @@ void motorControlCallback(const rio_control_node::Motor_Control &msg)
 	{
 		switch (msg.motors[i].id)
 		{
-		case 0:
+		case 1:
 		{
 			_motorUDPPacket.left_motor_val = msg.motors[i].output_value + msg.motors[i].arbitrary_feedforward;
 		}
 		break;
-		case 1:
+		case 4:
 		{
 			_motorUDPPacket.right_motor_val = msg.motors[i].output_value + msg.motors[i].arbitrary_feedforward;
 		}
@@ -103,7 +103,7 @@ int main(int argc, char **argv)
    * You must call one of the versions of ros::init() before using any other
    * part of the ROS system.
    */
-	ros::init(argc, argv, "listener");
+	ros::init(argc, argv, "simple_control_node");
 	// GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 	ros::NodeHandle n;
